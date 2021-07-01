@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
+
 # ==== Customize the below for your environment====
 resource_group='your_resource_group_name'
 region='westeurope'
@@ -8,6 +9,23 @@ mysql_server_name='your_sql_server_name'
 mysql_server_admin_name='your_sql_server_admin_name'
 mysql_server_admin_password='your_password'
 log_analytics='your_analytics_name'
+
+#########################################################
+# When error happened following function will be executed
+#########################################################
+
+trap 'catch $? $LINENO' EXIT
+catch() {
+  echo "catching!"
+  if [ "$1" != "0" ]; then
+    az group delete --no-wait --yes --name $resource_group
+    echo "Error $1 occurred on $2"
+  fi
+}
+
+#########################################################
+# Resource Creation
+#########################################################
 
 #Add Required extensions
 az extension add --name spring-cloud
@@ -300,14 +318,3 @@ printf "\n"
 printf "Completed testing the deployed services"
 printf "\n"
 printf "${GATEWAY_URL}"
-
-#########################################################
-# When error happened following function will be executed
-#########################################################
-
-function error_handler() {
-az group delete --no-wait --yes --name ${resource_group}
-echo "ERROR $1 occure :line no = $2" >&2
-exit 1
-}
-trap 'error_handler $? $LINENO' ERR
