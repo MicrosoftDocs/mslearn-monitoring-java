@@ -17,15 +17,16 @@ az extension add --name spring-cloud
 DEVBOX_IP_ADDRESS=$(curl ifconfig.me)
 
 #Create directory for github code
+cd ${project_directory}
 mkdir -p source-code
 cd source-code
+rm -rdf spring-petclinic-microservices
 
 #Clone GitHub Repo
 printf "\n"
 printf "Cloning the sample project: https://github.com/azure-samples/spring-petclinic-microservices"
 printf "\n"
 
-rm -rdf spring-petclinic-microservices
 git clone https://github.com/azure-samples/spring-petclinic-microservices
 cd spring-petclinic-microservices
 mvn clean package -DskipTests -Denv=cloud
