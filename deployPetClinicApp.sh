@@ -197,7 +197,7 @@ az spring-cloud app deploy --name ${visits_service} \
       mysql_server_admin_login_name=${mysql_server_admin_login_name} \
       mysql_server_admin_password=${mysql_server_admin_password}
 
-printf"\n"
+printf "\n"
 printf "Creating the log anaytics workspace: ${log_analytics}"
 printf "\n"
 
