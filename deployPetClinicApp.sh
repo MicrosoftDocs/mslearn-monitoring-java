@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 # ==== Must Cusomize the below for your environment====
 project_directory=$HOME
 resource_group='your_resource_group_name'
@@ -17,13 +17,15 @@ az extension add --name spring-cloud
 DEVBOX_IP_ADDRESS=$(curl ifconfig.me)
 
 #Create directory for github code
-cd ${project_directory}
-mkdir source-code
+mkdir -p source-code
 cd source-code
 
 #Clone GitHub Repo
-echo "\nCloning the sample project: https://github.com/azure-samples/spring-petclinic-microservices"
+printf "\n"
+printf "Cloning the sample project: https://github.com/azure-samples/spring-petclinic-microservices"
+printf "\n"
 
+rm -rdf spring-petclinic-microservices
 git clone https://github.com/azure-samples/spring-petclinic-microservices
 cd spring-petclinic-microservices
 mvn clean package -DskipTests -Denv=cloud
@@ -49,11 +51,15 @@ mysql_database_name='petclinic'
 
 cd "${project_directory}/source-code/spring-petclinic-microservices"
 
-echo "\nCreating the Resource Group: ${resource_group} Region: ${region}"
+printf "\n"
+printf "Creating the Resource Group: ${resource_group} Region: ${region}"
+printf "\n"
 
 az group create --name ${resource_group} --location ${region}
 
-echo "\nCreating the MySQL Server: ${mysql_server_name}"
+printf "\n"
+printf "Creating the MySQL Server: ${mysql_server_name}"
+printf "\n"
 
 az mysql server create \
     --resource-group ${resource_group} \
@@ -78,11 +84,14 @@ az mysql server firewall-rule create \
     --server ${mysql_server_name} \
     --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
 
-echo "\nCreating the Spring Cloud: ${spring_cloud_service}"
+printf "\n"
+printf "Creating the Spring Cloud: ${spring_cloud_service}"
+printf "\n"
 
 az spring-cloud create \
     --resource-group ${resource_group} \
     --name ${spring_cloud_service} \
+    --location ${region} \
     --sku standard \
     --disable-app-insights false \
     --enable-java-agent true \
@@ -91,7 +100,9 @@ az configure --defaults group=${resource_group} location=${region} spring-cloud=
 
 az spring-cloud config-server set --config-file application.yml --name ${spring_cloud_service}
 
-echo "\nCreating the MicroService Apps"
+printf "\n"
+printf "Creating the MicroService Apps"
+printf "\n"
 
 az spring-cloud app create --name ${api_gateway} --instance-count 1 --assign-endpoint true \
     --memory 2 --jvm-options='-Xms2048m -Xmx2048m'
@@ -150,7 +161,9 @@ az mysql server configuration set --name query_store_capture_interval \
   --resource-group ${resource_group} \
   --server ${mysql_server_name} --value 5
 
-echo "\nDeploying the Apps to the Spring Cloud"
+printf "\n"
+printf "Deploying the Apps to the Spring Cloud"
+printf "\n"
 
 az spring-cloud app deploy --name ${api_gateway} \
     --jar-path ${api_gateway_jar} \
@@ -184,7 +197,9 @@ az spring-cloud app deploy --name ${visits_service} \
       mysql_server_admin_login_name=${mysql_server_admin_login_name} \
       mysql_server_admin_password=${mysql_server_admin_password}
 
-echo "\nCreating the log anaytics workspace: ${log_analytics}"
+printf"\n"
+printf "Creating the log anaytics workspace: ${log_analytics}"
+printf "\n"
 
 az monitor log-analytics workspace create \
     --workspace-name ${log_analytics} \
@@ -265,7 +280,9 @@ az monitor diagnostic-settings create --name "send-mysql-logs-and-metrics-to-log
 
 export GATEWAY_URL=$(az spring-cloud app show --name ${api_gateway} | jq -r '.properties.url')
 
-echo "\nTesting the deployed services at ${GATEWAY_URL}"
+printf "\n"
+printf "Testing the deployed services at ${GATEWAY_URL}"
+printf "\n"
 
 for i in `seq 1 10`; 
 do
@@ -278,4 +295,18 @@ do
    curl -g ${GATEWAY_URL}/api/visit/owners/6/pets/8/visits
 done
 
-echo "\nCompleted testing the deployed services \n${GATEWAY_URL}"
+printf "\n"
+printf "Completed testing the deployed services"
+printf "\n"
+printf "${GATEWAY_URL}"
+
+#########################################################
+# When error happened following function will be executed
+#########################################################
+
+function error_handler() {
+az group delete --no-wait --yes --name ${resource_group}
+echo "ERROR $1 occure :line no = $2" >&2
+exit 1
+}
+trap 'error_handler $? $LINENO' ERR
