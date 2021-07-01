@@ -14,14 +14,6 @@ log_analytics='your_analytics_name'
 # When error happened following function will be executed
 #########################################################
 
-trap 'catch $? $LINENO' EXIT
-catch() {
-  echo "catching!"
-  if [ "$1" != "0" ]; then
-    az group delete --no-wait --yes --name $resource_group
-    echo "Error $1 occurred on $2"
-  fi
-}
 
 #########################################################
 # Resource Creation
