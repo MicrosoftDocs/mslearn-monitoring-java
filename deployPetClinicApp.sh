@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
-# ==== Must Cusomize the below for your environment====
-project_directory=$HOME
+# ==== Customize the below for your environment====
 resource_group='your_resource_group_name'
 region='westeurope'
 spring_cloud_service='your_azure_spring_cloud_name'
@@ -17,6 +16,7 @@ az extension add --name spring-cloud
 DEVBOX_IP_ADDRESS=$(curl ifconfig.me)
 
 #Create directory for github code
+project_directory=$HOME
 cd ${project_directory}
 mkdir -p source-code
 cd source-code
