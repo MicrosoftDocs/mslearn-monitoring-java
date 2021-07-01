@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -e
 
 # ==== Customize the below for your environment====
@@ -13,7 +13,6 @@ log_analytics='your_analytics_name'
 #########################################################
 # When error happened following function will be executed
 #########################################################
-
 
 #########################################################
 # Resource Creation
