@@ -14,6 +14,13 @@ log_analytics='your_analytics_name'
 # When error happened following function will be executed
 #########################################################
 
+function error_handler() {
+az group delete --no-wait --yes --name $resource_group
+echo "ERROR occured :line no = $2" >&2
+exit 1
+}
+
+trap 'error_handler $? ${LINENO}' ERR
 #########################################################
 # Resource Creation
 #########################################################
@@ -104,7 +111,7 @@ az spring-cloud create \
     --location ${region} \
     --sku standard \
     --disable-app-insights false \
-    --enable-java-agent true \
+    --enable-java-agent true
 
 az configure --defaults group=${resource_group} location=${region} spring-cloud=${spring_cloud_service}
 
@@ -309,3 +316,4 @@ printf "\n"
 printf "Completed testing the deployed services"
 printf "\n"
 printf "${GATEWAY_URL}"
+printf "\n"
