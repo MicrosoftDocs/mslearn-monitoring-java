@@ -82,7 +82,7 @@ az mysql server create \
     --resource-group ${resource_group} \
     --name ${mysql_server_name} \
     --location ${region} \
-    --sku-name B_Gen5_1 \
+    --sku-name GP_Gen5_2 \
     --storage-size 5120 \
     --admin-user ${mysql_server_admin_name} \
     --admin-password ${mysql_server_admin_password} \
