@@ -2,13 +2,13 @@
 set -e
 
 # ==== Customize the below for your environment====
-resource_group='your_resource_group_name'
+resource_group='your-resource-group-name'
 region='westeurope'
-spring_cloud_service='your_azure_spring_cloud_name'
-mysql_server_name='your_sql_server_name'
-mysql_server_admin_name='your_sql_server_admin_name'
-mysql_server_admin_password='your_password'
-log_analytics='your_analytics_name'
+spring_cloud_service='your-azure-spring-cloud-name'
+mysql_server_name='your-sql-server-name'
+mysql_server_admin_name='your-sql-server-admin-name'
+mysql_server_admin_password='your-password'
+log_analytics='your-analytics-name'
 
 #########################################################
 # When error happened following function will be executed
