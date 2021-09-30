@@ -118,19 +118,19 @@ az configure --defaults group=${resource_group} location=${region} spring-cloud=
 az spring-cloud config-server set --config-file application.yml --name ${spring_cloud_service}
 
 printf "\n"
-printf "Creating the MicroService Apps"
+printf "Creating the microservice apps"
 printf "\n"
 
 az spring-cloud app create --name ${api_gateway} --instance-count 1 --assign-endpoint true \
-    --memory 2 --jvm-options='-Xms2048m -Xmx2048m'
+    --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m'
 az spring-cloud app create --name ${admin_server} --instance-count 1 --assign-endpoint true \
-    --memory 2 --jvm-options='-Xms2048m -Xmx2048m'
+    --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m'
 az spring-cloud app create --name ${customers_service} \
-    --instance-count 1 --memory 2 --jvm-options='-Xms2048m -Xmx2048m'
+    --instance-count 1 --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m'
 az spring-cloud app create --name ${vets_service} \
-    --instance-count 1 --memory 2 --jvm-options='-Xms2048m -Xmx2048m'
+    --instance-count 1 --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m'
 az spring-cloud app create --name ${visits_service} \
-    --instance-count 1 --memory 2 --jvm-options='-Xms2048m -Xmx2048m'
+    --instance-count 1 --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m'
 
 # increase connection timeout
 az mysql server configuration set --name wait_timeout \
@@ -168,7 +168,7 @@ mysql -h"${mysql_server_full_name}" -u"${mysql_server_admin_login_name}" \
 
 az mysql server configuration set --name time_zone \
   --resource-group ${resource_group} \
-  --server ${mysql_server_name} --value "US/Eastern"
+  --server ${mysql_server_name} --value "US/Central"
 
 az mysql server configuration set --name query_store_capture_mode \
   --resource-group ${resource_group} \
@@ -179,19 +179,19 @@ az mysql server configuration set --name query_store_capture_interval \
   --server ${mysql_server_name} --value 5
 
 printf "\n"
-printf "Deploying the Apps to the Spring Cloud"
+printf "Deploying the apps to Spring Cloud"
 printf "\n"
 
 az spring-cloud app deploy --name ${api_gateway} \
-    --jar-path ${api_gateway_jar} \
+    --artifact-path ${api_gateway_jar} \
     --jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql'
 
 az spring-cloud app deploy --name ${admin_server} \
-    --jar-path ${admin_server_jar} \
+    --artifact-path ${admin_server_jar} \
     --jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql'
 
 az spring-cloud app deploy --name ${customers_service} \
---jar-path ${customers_service_jar} \
+--artifact-path ${customers_service_jar} \
 --jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql' \
 --env mysql_server_full_name=${mysql_server_full_name} \
       mysql_database_name=${mysql_database_name} \
@@ -199,7 +199,7 @@ az spring-cloud app deploy --name ${customers_service} \
       mysql_server_admin_password=${mysql_server_admin_password}
 
 az spring-cloud app deploy --name ${vets_service} \
---jar-path ${vets_service_jar} \
+--artifact-path ${vets_service_jar} \
 --jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql' \
 --env mysql_server_full_name=${mysql_server_full_name} \
       mysql_database_name=${mysql_database_name} \
@@ -207,7 +207,7 @@ az spring-cloud app deploy --name ${vets_service} \
       mysql_server_admin_password=${mysql_server_admin_password}
 
 az spring-cloud app deploy --name ${visits_service} \
---jar-path ${visits_service_jar} \
+--artifact-path ${visits_service_jar} \
 --jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql' \
 --env mysql_server_full_name=${mysql_server_full_name} \
       mysql_database_name=${mysql_database_name} \
