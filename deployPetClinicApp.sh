@@ -3,7 +3,7 @@ set -e
 
 # ==== Customize the below for your environment====
 resource_group='your-resource-group-name'
-region='westeurope'
+region='centralus'
 spring_cloud_service='your-azure-spring-cloud-name'
 mysql_server_name='your-sql-server-name'
 mysql_server_admin_name='your-sql-server-admin-name'
