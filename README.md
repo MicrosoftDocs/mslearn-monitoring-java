@@ -37,6 +37,7 @@ When you run the above command, a window will pop up with the file 'deployPetCli
 | mysql_server_name | The name of your MySQL server. It should be unique across Azure |
 | mysql_server_admin_name | Username for the MySQL Administrator. The admin name can't be "azure_superuser", "admin", "administrator", "root", "guest, or "public" |
 | mysql_server_admin_password | A new password for the server admin user. The password must be 8 to 128 characters long and contain a combination of uppercase or lowercase letters, numbers, and non-alphanumeric characters (!, $, #, %, and so on).|
+| log_analytics | Name of your Azure Log Analytics workspace |
 
 2. Save the file by selecting the ... action panel in the top right of the editor and select "Save".
 
@@ -51,7 +52,7 @@ The script takes 15-30 minutes to run and includes the creation of an Azure spri
 In the already open Azure Cloud Shell, run the below shell script. Leave the browser window and Azure Cloud Shell open while running. Store the URL when the script completes:
 
 ```bash
-sh deployPetClinicApp.sh
+bash deployPetClinicApp.sh
 ```
 
 In a web browser, navigate to the URL of your returned by the script to open the Pet Clinic microservice application.
