@@ -4,7 +4,7 @@ set -e
 # ==== Customize the below for your environment====
 resource_group='your-resource-group-name'
 region='centralus'
-spring_cloud_service='your-azure-spring-cloud-name'
+spring_apps_service='your-azure-spring-apps-name'
 mysql_server_name='your-sql-server-name'
 mysql_server_admin_name='your-sql-server-admin-name'
 mysql_server_admin_password='your-password'
@@ -102,20 +102,20 @@ az mysql server firewall-rule create \
     --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
 
 printf "\n"
-printf "Creating the Spring Cloud: ${spring_cloud_service}"
+printf "Creating the Spring Apps: ${spring_apps_service}"
 printf "\n"
 
 az spring-cloud create \
     --resource-group ${resource_group} \
-    --name ${spring_cloud_service} \
+    --name ${spring_apps_service} \
     --location ${region} \
     --sku standard \
     --disable-app-insights false \
     --enable-java-agent true
 
-az configure --defaults group=${resource_group} location=${region} spring-cloud=${spring_cloud_service}
+az configure --defaults group=${resource_group} location=${region} spring-cloud=${spring_apps_service}
 
-az spring-cloud config-server set --config-file application.yml --name ${spring_cloud_service}
+az spring-cloud config-server set --config-file application.yml --name ${spring_apps_service}
 
 printf "\n"
 printf "Creating the microservice apps"
@@ -179,7 +179,7 @@ az mysql server configuration set --name query_store_capture_interval \
   --server ${mysql_server_name} --value 5
 
 printf "\n"
-printf "Deploying the apps to Spring Cloud"
+printf "Deploying the apps to Spring Apps"
 printf "\n"
 
 az spring-cloud app deploy --name ${api_gateway} \
@@ -227,7 +227,7 @@ export LOG_ANALYTICS_RESOURCE_ID=$(az monitor log-analytics workspace show \
     --resource-group ${resource_group} \
     --workspace-name ${log_analytics} | jq -r '.id')
 
-export WEBAPP_RESOURCE_ID=$(az spring-cloud show --name ${spring_cloud_service} --resource-group ${resource_group} | jq -r '.id')
+export WEBAPP_RESOURCE_ID=$(az spring-cloud show --name ${spring_apps_service} --resource-group ${resource_group} | jq -r '.id')
 
 az monitor diagnostic-settings create --name "send-spring-logs-and-metrics-to-log-analytics" \
     --resource ${WEBAPP_RESOURCE_ID} \
