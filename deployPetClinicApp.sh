@@ -15,7 +15,7 @@ log_analytics='your-analytics-name'
 #########################################################
 
 function error_handler() {
-az group delete --no-wait --yes --name $resource_group
+# az group delete --no-wait --yes --name $resource_group
 echo "ERROR occured :line no = $2" >&2
 exit 1
 }
@@ -26,7 +26,7 @@ trap 'error_handler $? ${LINENO}' ERR
 #########################################################
 
 #Add Required extensions
-az extension add --name spring-cloud
+az extension add --name spring
 
 #set variables
 DEVBOX_IP_ADDRESS=$(curl ifconfig.me)
@@ -40,12 +40,12 @@ rm -rdf spring-petclinic-microservices
 
 #Clone GitHub Repo
 printf "\n"
-printf "Cloning the sample project: https://github.com/azure-samples/spring-petclinic-microservices"
+printf "Cloning the sample project: https://github.com/Azure-Samples/spring-petclinic-microservices"
 printf "\n"
 
-git clone https://github.com/azure-samples/spring-petclinic-microservices
+git clone https://github.com/Azure-Samples/spring-petclinic-microservices
 cd spring-petclinic-microservices
-mvn clean package -DskipTests -Denv=cloud
+mvn clean package -DskipTests
 
 # ==== Service and App Instances ====
 api_gateway='api-gateway'
@@ -54,17 +54,21 @@ customers_service='customers-service'
 vets_service='vets-service'
 visits_service='visits-service'
 
+# ==== PetClinic version ====
+petclinic_version='3.0.1'
+
 # ==== JARS ====
-api_gateway_jar="${project_directory}/source-code/spring-petclinic-microservices/spring-petclinic-api-gateway/target/spring-petclinic-api-gateway-2.5.1.jar"
-admin_server_jar="${project_directory}/source-code/spring-petclinic-microservices/spring-petclinic-admin-server/target/spring-petclinic-admin-server-2.5.1.jar"
-customers_service_jar="${project_directory}/source-code/spring-petclinic-microservices/spring-petclinic-customers-service/target/spring-petclinic-customers-service-2.5.1.jar"
-vets_service_jar="${project_directory}/source-code/spring-petclinic-microservices/spring-petclinic-vets-service/target/spring-petclinic-vets-service-2.5.1.jar"
-visits_service_jar="${project_directory}/source-code/spring-petclinic-microservices/spring-petclinic-visits-service/target/spring-petclinic-visits-service-2.5.1.jar"
+api_gateway_jar="${project_directory}/source-code/spring-petclinic-microservices/spring-petclinic-api-gateway/target/spring-petclinic-api-gateway-${petclinic_version}.jar"
+admin_server_jar="${project_directory}/source-code/spring-petclinic-microservices/spring-petclinic-admin-server/target/spring-petclinic-admin-server-${petclinic_version}.jar"
+customers_service_jar="${project_directory}/source-code/spring-petclinic-microservices/spring-petclinic-customers-service/target/spring-petclinic-customers-service-${petclinic_version}.jar"
+vets_service_jar="${project_directory}/source-code/spring-petclinic-microservices/spring-petclinic-vets-service/target/spring-petclinic-vets-service-${petclinic_version}.jar"
+visits_service_jar="${project_directory}/source-code/spring-petclinic-microservices/spring-petclinic-visits-service/target/spring-petclinic-visits-service-${petclinic_version}.jar"
 
 # ==== MYSQL INFO ====
 mysql_server_full_name="${mysql_server_name}.mysql.database.azure.com"
 mysql_server_admin_login_name="${mysql_server_admin_name}@${mysql_server_full_name}"
 mysql_database_name='petclinic'
+mysql_msi_name="msi-${mysql_server_name}"
 
 cd "${project_directory}/source-code/spring-petclinic-microservices"
 
@@ -78,141 +82,178 @@ printf "\n"
 printf "Creating the MySQL Server: ${mysql_server_name}"
 printf "\n"
 
-az mysql server create \
+az mysql flexible-server create \
     --resource-group ${resource_group} \
     --name ${mysql_server_name} \
     --location ${region} \
-    --sku-name GP_Gen5_2 \
-    --storage-size 5120 \
+    --tier Burstable \
+    --sku-name Standard_B1ms \
+    --public-access 0.0.0.0 \
+    --storage-size 32 \
     --admin-user ${mysql_server_admin_name} \
-    --admin-password ${mysql_server_admin_password} \
-    --ssl-enforcement Disabled
+    --admin-password ${mysql_server_admin_password}
 
-az mysql server firewall-rule create \
+az mysql flexible-server db create \
     --resource-group ${resource_group} \
-    --name ${mysql_server_name}-database-allow-local-ip \
-    --server ${mysql_server_name} \
+    --server-name ${mysql_server_name} \
+    --database-name ${mysql_database_name}
+
+az mysql flexible-server firewall-rule create \
+    --resource-group ${resource_group} \
+    --rule-name ${mysql_server_name}-database-allow-local-ip \
+    --name ${mysql_server_name} \
     --start-ip-address ${DEVBOX_IP_ADDRESS} \
     --end-ip-address ${DEVBOX_IP_ADDRESS}
 
-az mysql server firewall-rule create \
-    --resource-group ${resource_group} \
-    --name allAzureIPs \
-    --server ${mysql_server_name} \
-    --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
+# create managed identity for mysql. By assigning the identity to the mysql server, it will enable Azure AD authentication
+az identity create \
+        --name ${mysql_msi_name} \
+        --resource-group ${resource_group} \
+        --location ${region}
+
+IDENTITY_ID=$(az identity show --name ${mysql_msi_name} --resource-group ${resource_group} --query id -o tsv)
+
+
 
 printf "\n"
 printf "Creating the Spring Apps: ${spring_apps_service}"
 printf "\n"
 
-az spring-cloud create \
+az spring create \
     --resource-group ${resource_group} \
     --name ${spring_apps_service} \
     --location ${region} \
     --sku standard \
-    --disable-app-insights false \
-    --enable-java-agent true
+    --disable-app-insights false 
 
-az configure --defaults group=${resource_group} location=${region} spring-cloud=${spring_apps_service}
+az configure --defaults group=${resource_group} location=${region} spring=${spring_apps_service}
 
-az spring-cloud config-server set --config-file application.yml --name ${spring_apps_service}
+az spring config-server set --config-file application.yml --name ${spring_apps_service}
 
 printf "\n"
 printf "Creating the microservice apps"
 printf "\n"
 
-az spring-cloud app create --name ${api_gateway} --instance-count 1 --assign-endpoint true \
-    --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m'
-az spring-cloud app create --name ${admin_server} --instance-count 1 --assign-endpoint true \
-    --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m'
-az spring-cloud app create --name ${customers_service} \
-    --instance-count 1 --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m'
-az spring-cloud app create --name ${vets_service} \
-    --instance-count 1 --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m'
-az spring-cloud app create --name ${visits_service} \
-    --instance-count 1 --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m'
+az spring app create --name ${api_gateway} --instance-count 1 --assign-endpoint true \
+    --runtime-version Java_17 \
+    --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m' &
+az spring app create --name ${admin_server} --instance-count 1 --assign-endpoint true \
+    --runtime-version Java_17 \
+    --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m' &
+az spring app create --name ${customers_service} \
+    --runtime-version Java_17 \
+    --instance-count 1 --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m' &
+az spring app create --name ${vets_service} \
+    --runtime-version Java_17 \
+    --instance-count 1 --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m' &
+az spring app create --name ${visits_service} \
+    --runtime-version Java_17 \
+    --instance-count 1 --memory 2Gi --jvm-options='-Xms2048m -Xmx2048m' &
+
+wait
 
 # increase connection timeout
-az mysql server configuration set --name wait_timeout \
+az mysql flexible-server parameter set --name wait_timeout \
  --resource-group ${resource_group} \
  --server ${mysql_server_name} --value 2147483
 
-az mysql server configuration set --name slow_query_log \
+az mysql flexible-server parameter set --name slow_query_log \
  --resource-group ${resource_group} \
  --server ${mysql_server_name} --value ON
 
-az mysql server configuration set --name audit_log_enabled \
+az mysql flexible-server parameter set --name audit_log_enabled \
  --resource-group ${resource_group} \
  --server ${mysql_server_name} --value ON
 
-az mysql server configuration set --name audit_log_events \
+az mysql flexible-server parameter set --name audit_log_events \
  --resource-group ${resource_group} \
  --server ${mysql_server_name} --value "ADMIN,CONNECTION,DCL,DDL,DML,DML_NONSELECT,DML_SELECT,GENERAL,TABLE_ACCESS"
 
-az mysql server configuration set --name log_queries_not_using_indexes \
+az mysql flexible-server parameter set --name log_queries_not_using_indexes \
  --resource-group ${resource_group} \
  --server ${mysql_server_name} --value ON
 
-az mysql server configuration set --name long_query_time \
+az mysql flexible-server parameter set --name long_query_time \
  --resource-group ${resource_group} \
  --server ${mysql_server_name} --value 0
 
-#mysql Configuration 
-mysql -h"${mysql_server_full_name}" -u"${mysql_server_admin_login_name}" \
-     -p"${mysql_server_admin_password}" \
-     -e  "CREATE DATABASE petclinic;CREATE USER 'root' IDENTIFIED BY 'petclinic';GRANT ALL PRIVILEGES ON petclinic.* TO 'root';"
-
-mysql -h"${mysql_server_full_name}" -u"${mysql_server_admin_login_name}" \
-     -p"${mysql_server_admin_password}" \
-     -e  "CALL mysql.az_load_timezone();"
-
-az mysql server configuration set --name time_zone \
+az mysql flexible-server parameter set --name time_zone \
   --resource-group ${resource_group} \
   --server ${mysql_server_name} --value "US/Central"
 
-az mysql server configuration set --name query_store_capture_mode \
+az mysql flexible-server parameter set --name slow_query_log  \
   --resource-group ${resource_group} \
-  --server ${mysql_server_name} --value ALL
+  --server ${mysql_server_name} --value ON
 
-az mysql server configuration set --name query_store_capture_interval \
-  --resource-group ${resource_group} \
-  --server ${mysql_server_name} --value 5
+printf "\n"
+printf "Create service connections from Spring Apps applications to MySQL database"
+printf "\n"
+
+az spring connection create mysql-flexible \
+    --resource-group ${resource_group} \
+    --service ${spring_apps_service} \
+    --app ${customers_service} \
+    --deployment default \
+    --tg ${resource_group} \
+    --server ${mysql_server_name} \
+    --database ${mysql_database_name} \
+    --system-identity mysql-identity-id=$IDENTITY_ID \
+    --client-type springboot &
+
+az spring connection create mysql-flexible \
+    --resource-group ${resource_group} \
+    --service ${spring_apps_service} \
+    --app ${visits_service} \
+    --deployment default \
+    --tg ${resource_group} \
+    --server ${mysql_server_name} \
+    --database ${mysql_database_name} \
+    --system-identity mysql-identity-id=$IDENTITY_ID \
+    --client-type springboot &
+
+az spring connection create mysql-flexible \
+    --resource-group ${resource_group} \
+    --service ${spring_apps_service} \
+    --app ${vets_service} \
+    --deployment default \
+    --tg ${resource_group} \
+    --server ${mysql_server_name} \
+    --database ${mysql_database_name} \
+    --system-identity mysql-identity-id=$IDENTITY_ID \
+    --client-type springboot &
+
+wait
 
 printf "\n"
 printf "Deploying the apps to Spring Apps"
 printf "\n"
 
-az spring-cloud app deploy --name ${api_gateway} \
+az spring app deploy --name ${api_gateway} \
     --artifact-path ${api_gateway_jar} \
-    --jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql'
+    --runtime-version Java_17 \
+    --jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql' &
 
-az spring-cloud app deploy --name ${admin_server} \
+az spring app deploy --name ${admin_server} \
     --artifact-path ${admin_server_jar} \
-    --jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql'
+    --runtime-version Java_17 \
+    --jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql' &
 
-az spring-cloud app deploy --name ${customers_service} \
+az spring app deploy --name ${customers_service} \
 --artifact-path ${customers_service_jar} \
---jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql' \
---env mysql_server_full_name=${mysql_server_full_name} \
-      mysql_database_name=${mysql_database_name} \
-      mysql_server_admin_login_name=${mysql_server_admin_login_name} \
-      mysql_server_admin_password=${mysql_server_admin_password}
+--runtime-version Java_17 \
+--jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=passwordless' &
 
-az spring-cloud app deploy --name ${vets_service} \
+az spring app deploy --name ${vets_service} \
 --artifact-path ${vets_service_jar} \
---jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql' \
---env mysql_server_full_name=${mysql_server_full_name} \
-      mysql_database_name=${mysql_database_name} \
-      mysql_server_admin_login_name=${mysql_server_admin_login_name} \
-      mysql_server_admin_password=${mysql_server_admin_password}
+--runtime-version Java_17 \
+--jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=passwordless' &
 
-az spring-cloud app deploy --name ${visits_service} \
+az spring app deploy --name ${visits_service} \
 --artifact-path ${visits_service_jar} \
---jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=mysql' \
---env mysql_server_full_name=${mysql_server_full_name} \
-      mysql_database_name=${mysql_database_name} \
-      mysql_server_admin_login_name=${mysql_server_admin_login_name} \
-      mysql_server_admin_password=${mysql_server_admin_password}
+--runtime-version Java_17 \
+--jvm-options='-Xms2048m -Xmx2048m -Dspring.profiles.active=passwordless' &
+
+wait
 
 printf "\n"
 printf "Creating the log anaytics workspace: ${log_analytics}"
@@ -225,9 +266,11 @@ az monitor log-analytics workspace create \
                             
 export LOG_ANALYTICS_RESOURCE_ID=$(az monitor log-analytics workspace show \
     --resource-group ${resource_group} \
-    --workspace-name ${log_analytics} | jq -r '.id')
+    --workspace-name ${log_analytics} \
+    --query 'id' \
+    --output tsv)
 
-export WEBAPP_RESOURCE_ID=$(az spring-cloud show --name ${spring_apps_service} --resource-group ${resource_group} | jq -r '.id')
+export WEBAPP_RESOURCE_ID=$(az spring show --name ${spring_apps_service} --resource-group ${resource_group} --query 'id' --output tsv)
 
 az monitor diagnostic-settings create --name "send-spring-logs-and-metrics-to-log-analytics" \
     --resource ${WEBAPP_RESOURCE_ID} \
@@ -261,7 +304,7 @@ az monitor diagnostic-settings create --name "send-spring-logs-and-metrics-to-lo
          }
        ]'
 
-export MYSQL_RESOURCE_ID=$(az mysql server show --name ${mysql_server_name} --resource-group ${resource_group} | jq -r '.id')
+export MYSQL_RESOURCE_ID=$(az mysql flexible-server show --name ${mysql_server_name} --resource-group ${resource_group} --query 'id' --output tsv)
 
 az monitor diagnostic-settings create --name "send-mysql-logs-and-metrics-to-log-analytics" \
     --resource ${MYSQL_RESOURCE_ID} \
@@ -295,7 +338,7 @@ az monitor diagnostic-settings create --name "send-mysql-logs-and-metrics-to-log
          }
        ]'
 
-export GATEWAY_URL=$(az spring-cloud app show --name ${api_gateway} | jq -r '.properties.url')
+export GATEWAY_URL=$(az spring app show --name ${api_gateway} --query 'properties.url' --output tsv)
 
 printf "\n"
 printf "Testing the deployed services at ${GATEWAY_URL}"
