@@ -2,13 +2,13 @@
 set -e
 
 # ==== Customize the below for your environment====
-resource_group='rg-learn-petclinic'
-region='eastus'
-spring_apps_service='asa-fm-learn-petclinic'
-mysql_server_name='mysql-fm-learn-petclinic'
-mysql_server_admin_name='azureuser'
-mysql_server_admin_password='Corp123456789!'
-log_analytics='law-fm-learn-petclinic'
+resource_group='your-resource-group-name'
+region='centralus'
+spring_apps_service='your-azure-spring-apps-name'
+mysql_server_name='your-sql-server-name'
+mysql_server_admin_name='your-sql-server-admin-name'
+mysql_server_admin_password='your-password'
+log_analytics='your-analytics-name'
 
 #########################################################
 # When error happened following function will be executed
@@ -40,12 +40,11 @@ rm -rdf spring-petclinic-microservices
 
 #Clone GitHub Repo
 printf "\n"
-printf "Cloning the sample project: https://github.com/felipmiguel/spring-petclinic-microservices"
+printf "Cloning the sample project: https://github.com/Azure-Samples/spring-petclinic-microservices"
 printf "\n"
 
-git clone https://github.com/felipmiguel/spring-petclinic-microservices
+git clone https://github.com/Azure-Samples/spring-petclinic-microservices
 cd spring-petclinic-microservices
-git checkout 3.0.0
 mvn clean package -DskipTests
 
 # ==== Service and App Instances ====
@@ -178,15 +177,6 @@ az mysql flexible-server parameter set --name long_query_time \
  --resource-group ${resource_group} \
  --server ${mysql_server_name} --value 0
 
-#mysql Configuration 
-# mysql -h"${mysql_server_full_name}" -u"${mysql_server_admin_login_name}" \
-#      -p"${mysql_server_admin_password}" \
-#      -e  "CREATE DATABASE petclinic;CREATE USER 'root' IDENTIFIED BY 'petclinic';GRANT ALL PRIVILEGES ON petclinic.* TO 'root';"
-
-# mysql -h"${mysql_server_full_name}" -u"${mysql_server_admin_login_name}" \
-#      -p"${mysql_server_admin_password}" \
-#      -e  "CALL mysql.az_load_timezone();"
-
 az mysql flexible-server parameter set --name time_zone \
   --resource-group ${resource_group} \
   --server ${mysql_server_name} --value "US/Central"
@@ -194,10 +184,6 @@ az mysql flexible-server parameter set --name time_zone \
 az mysql flexible-server parameter set --name slow_query_log  \
   --resource-group ${resource_group} \
   --server ${mysql_server_name} --value ON
-
-# az mysql flexible-server parameter set --name query_store_capture_interval \
-#   --resource-group ${resource_group} \
-#   --server ${mysql_server_name} --value 5
 
 printf "\n"
 printf "Create service connections from Spring Apps applications to MySQL database"
