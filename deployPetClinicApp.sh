@@ -3,7 +3,7 @@ set -e
 
 # ==== Customize the below for your environment====
 resource_group='your-resource-group-name'
-region='centralus'
+region='your-region'
 spring_apps_service='your-azure-spring-apps-name'
 mysql_server_name='your-sql-server-name'
 mysql_server_admin_name='your-sql-server-admin-name'
@@ -43,7 +43,7 @@ printf "\n"
 printf "Cloning the sample project: https://github.com/azure-samples/spring-petclinic-microservices"
 printf "\n"
 
-git clone https://github.com/azure-samples/spring-petclinic-microservices
+git clone -b 2.7.6 --single-branch https://github.com/Azure-Samples/spring-petclinic-microservices.git
 cd spring-petclinic-microservices
 mvn clean package -DskipTests -Denv=cloud
 
